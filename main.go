@@ -1,27 +1,15 @@
 package main
 
 import (
-	"log"
 	"bytes"
 	"fmt"
+	"log"
+	"net"
 
 	"github.com/google/gopacket"
-	"github.com/google/gopacket/pcap"
 	_ "github.com/google/gopacket/layers"
+	"github.com/google/gopacket/pcap"
 )
-
-type MacAddress []byte
-
-func (m MacAddress) String() string {
-	result := ""
-	for i := 0; i<6; i++ {
-		if (i != 0) {
-			result += ":"
-		}
-		result += fmt.Sprintf("%0X", m[i])
-	}
-	return result
-}
 
 type EtherType []byte
 
@@ -36,17 +24,15 @@ func (e EtherType) String() string {
 	default:
 		return "Other: " + fmt.Sprintf("%02X%0X", e[0], e[1])
 	}
-
 }
 
 func handlePacket(p gopacket.Packet) {
 	header := p.LinkLayer().LayerContents()
-	etherDstMac := MacAddress(header[0:6])
-	etherSrcMac := MacAddress(header[6:12])
+	etherDstMac, _ := net.ParseMAC(fmt.Sprintf("%X", header[0:6]))
+	etherSrcMac, _ := net.ParseMAC(fmt.Sprintf("%X", header[6:12]))
 	etherType := EtherType(header[12:14])
 
-	fmt.Printf("[%s]: %s -> %s\n", etherType, etherSrcMac.String(), etherDstMac.String())
-	//header = header[:8]
+	fmt.Printf("[%s]: %s -> %s\n", etherType, etherSrcMac, etherDstMac)
 }
 
 func main() {
@@ -61,7 +47,6 @@ func main() {
 	packetSource := gopacket.NewPacketSource(handle, handle.LinkType())
 
 	for packet := range packetSource.Packets() {
-		handlePacket(packet)  // Do something with each packet.
+		handlePacket(packet) // Do something with each packet.
 	}
 }
-
