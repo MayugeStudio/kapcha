@@ -1,10 +1,6 @@
 package main
 
-import (
-	"fmt"
-	"bytes"
-	"net"
-)
+import "bytes"
 
 type EtherType int
 
@@ -41,12 +37,12 @@ func BytesToEtherType(e []byte) EtherType {
 	}
 }
 
+
 type EtherFrame struct {
-	DstMAC net.HardwareAddr
-	SrcMAC net.HardwareAddr
+	DstMAC [6]byte
+	SrcMAC [6]byte
 	Type EtherType
+	RawPayload []byte
+	Packet Packet
 }
 
-func (e EtherFrame) String() string {
-	return fmt.Sprintf("[%s]: %s -> %s", e.Type, e.SrcMAC, e.DstMAC)
-}

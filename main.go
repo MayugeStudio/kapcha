@@ -3,7 +3,7 @@ package main
 import (
 	"fmt"
 	"log"
-	"net"
+	_"net"
 
 	"github.com/google/gopacket"
 	_ "github.com/google/gopacket/layers"
@@ -17,19 +17,29 @@ import (
 )
 
 func handlePacket(p gopacket.Packet) EtherFrame {
-	header := p.LinkLayer().LayerContents()
-	etherDstMAC, _ := net.ParseMAC(fmt.Sprintf("%X", header[0:6]))
-	etherSrcMAC, _ := net.ParseMAC(fmt.Sprintf("%X", header[6:12]))
-	etherType := BytesToEtherType(header[12:14])
-
-	return EtherFrame{
-		DstMAC: etherDstMAC,
-		SrcMAC: etherSrcMAC,
-		Type: etherType,
+	contents := p.LinkLayer().LayerContents()
+	etherDstMAC := contents[0:6]
+	etherSrcMAC := contents[6:12]
+	etherType := BytesToEtherType(contents[12:14])
+	payload := p.LinkLayer().LayerPayload()
+	var packet Packet
+	if (etherType == ET_ARP) {
+		packet = NewArpPacket(payload)
 	}
+
+	ef := EtherFrame{
+		Type: etherType,
+		RawPayload: payload,
+		Packet: packet,
+	}
+	copy(ef.DstMAC[:], etherDstMAC)
+	copy(ef.SrcMAC[:], etherSrcMAC)
+
+	return ef
 }
 
 func main() {
+	// ------ UI ------
 	myApp := app.New()
 	window := myApp.NewWindow("Hello")
 	window.Resize(fyne.NewSize(800, 600))
@@ -38,7 +48,7 @@ func main() {
 
 	table := widget.NewTable(
 		func() (int, int) {
-			return len(data), 3
+			return len(data), 4
 		},
 
 		func() fyne.CanvasObject {
@@ -57,15 +67,19 @@ func main() {
 			case 0:
 				label.SetText(p.Type.String())
 			case 1:
-				label.SetText(p.SrcMAC.String())
+				label.SetText(fmt.Sprintf("%X", p.SrcMAC))
 			case 2:
-				label.SetText(p.DstMAC.String())
+				label.SetText(fmt.Sprintf("%X", p.DstMAC))
+			case 3:
+				label.SetText(p.Packet.(ArpPacket).String())
 			}
 		},
 	)
 	table.SetColumnWidth(0, 80)
 	table.SetColumnWidth(1, 150)
 	table.SetColumnWidth(2, 200)
+	table.SetColumnWidth(3, 600)
+
 	table.ShowHeaderRow = true;
 	table.CreateHeader = func() fyne.CanvasObject {
 		return widget.NewLabel("")
@@ -73,13 +87,15 @@ func main() {
 	table.UpdateHeader = func(id widget.TableCellID, template fyne.CanvasObject) {
 		if id.Row == -1 {
 			label := template.(*widget.Label)
-			headers := []string{"Type", "Source MAC", "Destination MAC"}
+			headers := []string{"Type", "Source MAC", "Destination MAC", "Info"}
 			label.SetText(headers[id.Col])
 		}
 	}
 
+	// ------ Logic ------
+
 	// Create handle from the network interface.
-	handle, err := pcap.OpenLive("en5", 1600, true, pcap.BlockForever)
+	handle, err := pcap.OpenLive("en0", 1600, true, pcap.BlockForever)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -90,7 +106,10 @@ func main() {
 	packets := make(chan EtherFrame, 100)
 	go func() {
 		for packet := range packetSource.Packets() {
-			packets <- handlePacket(packet)
+			etherFrame := handlePacket(packet)
+			if (etherFrame.Type == ET_ARP) {
+				packets <- etherFrame
+			}
 		}
 	}()
 
