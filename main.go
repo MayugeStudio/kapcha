@@ -20,7 +20,7 @@ func handlePacket(p gopacket.Packet) EtherFrame {
 	header := p.LinkLayer().LayerContents()
 	etherDstMAC, _ := net.ParseMAC(fmt.Sprintf("%X", header[0:6]))
 	etherSrcMAC, _ := net.ParseMAC(fmt.Sprintf("%X", header[6:12]))
-	etherType := EtherType(header[12:14])
+	etherType := BytesToEtherType(header[12:14])
 
 	return EtherFrame{
 		DstMAC: etherDstMAC,

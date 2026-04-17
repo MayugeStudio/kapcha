@@ -6,18 +6,38 @@ import (
 	"net"
 )
 
-type EtherType []byte
+type EtherType int
+
+const (
+	ET_ARP EtherType = iota
+	ET_IPv4
+	ET_IPv6
+	ET_Other
+)
 
 func (e EtherType) String() string {
-	switch {
-	case bytes.Equal(e, []byte{0x08, 0x00}):
-		return "IPv4"
-	case bytes.Equal(e, []byte{0x08, 0x06}):
+	switch e {
+	case ET_ARP:
 		return "ARP"
-	case bytes.Equal(e, []byte{0x86, 0xDD}):
+	case ET_IPv4:
+		return "IPv4"
+	case ET_IPv6:
 		return "IPv6"
 	default:
-		return "Other: " + fmt.Sprintf("%02X%0X", e[0], e[1])
+		return "Other"
+	}
+}
+
+func BytesToEtherType(e []byte) EtherType {
+	switch {
+	case bytes.Equal(e, []byte{0x08, 0x06}):
+		return ET_ARP
+	case bytes.Equal(e, []byte{0x08, 0x00}):
+		return ET_IPv4
+	case bytes.Equal(e, []byte{0x86, 0xDD}):
+		return ET_IPv6
+	default:
+		return ET_Other
 	}
 }
 
