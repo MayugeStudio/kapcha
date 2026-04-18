@@ -39,7 +39,6 @@ func handlePacket(p gopacket.Packet) EtherFrame {
 }
 
 func main() {
-	// ------ UI ------
 	myApp := app.New()
 	window := myApp.NewWindow("Hello")
 	window.Resize(fyne.NewSize(1000, 800))
@@ -95,7 +94,15 @@ func main() {
 		}
 	}
 
-	// ------ Logic ------
+	window.SetContent(table)
+
+	arpMenuItem := fyne.NewMenuItem("arp", func(){})
+	ipv4MenuItem := fyne.NewMenuItem("ipv4", func(){})
+	ipv6MenuItem := fyne.NewMenuItem("ipv6", func(){})
+	protocolMenu := fyne.NewMenu("Select Protocol", arpMenuItem, ipv4MenuItem, ipv6MenuItem)
+
+	mainmenu := fyne.NewMainMenu(protocolMenu)
+	window.SetMainMenu(mainmenu)
 
 	// Create handle from the network interface.
 	handle, err := pcap.OpenLive("en0", 1600, true, pcap.BlockForever)
@@ -126,6 +133,5 @@ func main() {
 		}
 	}()
 
-	window.SetContent(table)
 	window.ShowAndRun()
 }
