@@ -28,11 +28,36 @@ func IPaddrToString(rawaddr [4]byte) string {
 	return result
 }
 
+func MACaddrToString(rawaddr [6]byte) string {
+	var result string
+	for i := 0; i < 6; i++ {
+		if i != 0 {
+			result += ":"
+		}
+		result += fmt.Sprintf("%X", rawaddr[i])
+	}
+	return result
+}
+
 func (a ArpPacket) String() string {
-	return fmt.Sprintf("MAC: %X / IP: %s -> MAC: %X / IP: %s", 
-		a.SenderHardwareAddr,
+	return fmt.Sprintf("MAC: %s / IP: %s -> MAC: %s / IP: %s", 
+		MACaddrToString(a.SenderHardwareAddr),
 		IPaddrToString(a.SenderProtocolAddr),
-		a.DestHardwareAddr,
+		MACaddrToString(a.DestHardwareAddr),
+		IPaddrToString(a.DestProtocolAddr),
+	)
+}
+
+func (a ArpPacket) SenderToString() string {
+	return fmt.Sprintf("MAC: %s, IP: %s", 
+		MACaddrToString(a.SenderHardwareAddr),
+		IPaddrToString(a.SenderProtocolAddr),
+	)
+}
+
+func (a ArpPacket) DestToString() string {
+	return fmt.Sprintf("MAC: %s, IP: %s",
+		MACaddrToString(a.DestHardwareAddr),
 		IPaddrToString(a.DestProtocolAddr),
 	)
 }

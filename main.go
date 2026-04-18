@@ -42,13 +42,13 @@ func main() {
 	// ------ UI ------
 	myApp := app.New()
 	window := myApp.NewWindow("Hello")
-	window.Resize(fyne.NewSize(800, 600))
+	window.Resize(fyne.NewSize(1000, 800))
 
 	var data []EtherFrame
 
 	table := widget.NewTable(
 		func() (int, int) {
-			return len(data), 4
+			return len(data), 5
 		},
 
 		func() fyne.CanvasObject {
@@ -71,14 +71,17 @@ func main() {
 			case 2:
 				label.SetText(fmt.Sprintf("%X", p.DstMAC))
 			case 3:
-				label.SetText(p.Packet.(ArpPacket).String())
+				label.SetText(p.Packet.(ArpPacket).SenderToString())
+			case 4:
+				label.SetText(p.Packet.(ArpPacket).DestToString())
 			}
 		},
 	)
 	table.SetColumnWidth(0, 80)
 	table.SetColumnWidth(1, 150)
 	table.SetColumnWidth(2, 200)
-	table.SetColumnWidth(3, 600)
+	table.SetColumnWidth(3, 300)
+	table.SetColumnWidth(4, 300)
 
 	table.ShowHeaderRow = true;
 	table.CreateHeader = func() fyne.CanvasObject {
@@ -87,7 +90,7 @@ func main() {
 	table.UpdateHeader = func(id widget.TableCellID, template fyne.CanvasObject) {
 		if id.Row == -1 {
 			label := template.(*widget.Label)
-			headers := []string{"Type", "Source MAC", "Destination MAC", "Info"}
+			headers := []string{"Type", "Sender MAC", "Destination MAC", "Sender Info", "Destination Info"}
 			label.SetText(headers[id.Col])
 		}
 	}
