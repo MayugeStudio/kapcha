@@ -87,7 +87,7 @@ func main() {
 	window := myApp.NewWindow("Hello")
 	window.Resize(fyne.NewSize(1000, 800))
 
-	interfaceName := "en5"
+	interfaceName := "en0"
 
 	ctx, captureCancel := context.WithCancel(context.Background())
 	startCapture(ctx, interfaceName)
@@ -132,9 +132,9 @@ func main() {
 			case 2:
 				label.SetText(fmt.Sprintf("%X", p.DstMAC))
 			case 3:
-				label.SetText(p.Packet.(ArpPacket).SenderToString())
+				label.SetText(p.Packet.Sender())
 			case 4:
-				label.SetText(p.Packet.(ArpPacket).DestToString())
+				label.SetText(p.Packet.Dest())
 			}
 		},
 	)

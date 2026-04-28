@@ -1,4 +1,8 @@
 package main
 
-type Packet interface {}
+type Packet interface {
+	Dest() string
+	Sender() string
+	Info() string
+}
 

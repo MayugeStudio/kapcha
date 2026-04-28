@@ -62,6 +62,17 @@ func (a ArpPacket) DestToString() string {
 	)
 }
 
+func (a ArpPacket) Dest() string {
+	return MACaddrToString(a.DestHardwareAddr)
+}
+
+func (a ArpPacket) Sender() string {
+	return MACaddrToString(a.SenderHardwareAddr)
+}
+
+func (a ArpPacket) Info() string {
+	return a.String()
+}
 
 func NewArpPacket(data []byte) ArpPacket {
 	// if len(data) < 42 {
@@ -82,6 +93,4 @@ func NewArpPacket(data []byte) ArpPacket {
 
 	return ap;
 }
-
-
 
