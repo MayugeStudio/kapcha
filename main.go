@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	_"net"
+	"context"
 
 	"github.com/google/gopacket"
 	_ "github.com/google/gopacket/layers"
@@ -12,11 +13,17 @@ import (
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/app"
 	_"fyne.io/fyne/v2/canvas"
+	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/widget"
 	_"image/color"
 )
 
-func handlePacket(p gopacket.Packet) EtherFrame {
+
+// Captured etherFrame
+var dataForDisplay []EtherFrame
+var packets chan EtherFrame
+
+func createEtherframeFromPacket(p gopacket.Packet) EtherFrame {
 	contents := p.LinkLayer().LayerContents()
 	etherDstMAC := contents[0:6]
 	etherSrcMAC := contents[6:12]
@@ -26,6 +33,8 @@ func handlePacket(p gopacket.Packet) EtherFrame {
 	if (etherType == ET_ARP) {
 		packet = NewArpPacket(payload)
 	}
+
+	fmt.Println(packet)
 
 	ef := EtherFrame{
 		Type: etherType,
@@ -38,16 +47,69 @@ func handlePacket(p gopacket.Packet) EtherFrame {
 	return ef
 }
 
+func startCapture(ctx context.Context, interfaceName string) {
+	// Create handle from the network interface.
+	handle, err := pcap.OpenLive(interfaceName, 1600, true, pcap.BlockForever)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// Decode a packet
+	packetSource := gopacket.NewPacketSource(handle, handle.LinkType())
+	fmt.Println("startCapture was called")
+	fmt.Println(handle)
+	fmt.Println(packetSource)
+	go func() {
+		defer handle.Close()
+
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case packet, ok := <-packetSource.Packets():
+				fmt.Println(packet)
+				if !ok {
+					return
+				}
+				etherFrame := createEtherframeFromPacket(packet)
+				if (etherFrame.Type == ET_ARP) {
+					packets <- etherFrame
+				}
+			}
+		}
+	}()
+}
+
 func main() {
+	packets = make(chan EtherFrame, 100)
+
 	myApp := app.New()
 	window := myApp.NewWindow("Hello")
 	window.Resize(fyne.NewSize(1000, 800))
 
-	var data []EtherFrame
+	interfaceName := "en5"
+
+	ctx, captureCancel := context.WithCancel(context.Background())
+	startCapture(ctx, interfaceName)
+
+	startButton := widget.NewButton("Start", func() {
+		if captureCancel != nil {
+			captureCancel()
+		}
+		ctx, c := context.WithCancel(context.Background())
+		captureCancel = c
+		startCapture(ctx, interfaceName)
+	})
+	stopButton := widget.NewButton("Stop", func() {
+		if captureCancel != nil {
+			captureCancel()
+		}
+	})
+	toolbar := container.NewHBox(startButton, stopButton)
 
 	table := widget.NewTable(
 		func() (int, int) {
-			return len(data), 5
+			return len(dataForDisplay), 5
 		},
 
 		func() fyne.CanvasObject {
@@ -57,11 +119,11 @@ func main() {
 		func(id widget.TableCellID, obj fyne.CanvasObject) {
 			label := obj.(*widget.Label)
 
-			if len(data) == 0 {
+			if len(dataForDisplay) == 0 {
 				return
 			}
 
-			p := data[id.Row]
+			p := dataForDisplay[id.Row]
 			switch id.Col {
 			case 0:
 				label.SetText(p.Type.String())
@@ -94,8 +156,9 @@ func main() {
 		}
 	}
 
-	window.SetContent(table)
+	window.SetContent(container.NewBorder(toolbar, nil, nil, nil, table))
 
+	// main menu
 	arpMenuItem := fyne.NewMenuItem("arp", func(){})
 	ipv4MenuItem := fyne.NewMenuItem("ipv4", func(){})
 	ipv6MenuItem := fyne.NewMenuItem("ipv6", func(){})
@@ -104,34 +167,16 @@ func main() {
 	mainmenu := fyne.NewMainMenu(protocolMenu)
 	window.SetMainMenu(mainmenu)
 
-	// Create handle from the network interface.
-	handle, err := pcap.OpenLive("en0", 1600, true, pcap.BlockForever)
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer handle.Close()
-
-	// Decode a packet
-	packetSource := gopacket.NewPacketSource(handle, handle.LinkType())
-	packets := make(chan EtherFrame, 100)
-	go func() {
-		for packet := range packetSource.Packets() {
-			etherFrame := handlePacket(packet)
-			if (etherFrame.Type == ET_ARP) {
-				packets <- etherFrame
-			}
-		}
-	}()
-
 	go func() {
 		for p := range packets {
 			fyne.Do(func () {
-				data = append(data, p)
+				dataForDisplay = append(dataForDisplay, p)
 				table.Refresh()
 				table.ScrollToBottom();
 			})
 		}
 	}()
+
 
 	window.ShowAndRun()
 }
