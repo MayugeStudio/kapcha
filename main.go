@@ -109,7 +109,7 @@ func main() {
 
 	table := widget.NewTable(
 		func() (int, int) {
-			return len(dataForDisplay), 5
+			return len(dataForDisplay), 4
 		},
 
 		func() fyne.CanvasObject {
@@ -128,13 +128,11 @@ func main() {
 			case 0:
 				label.SetText(p.Type.String())
 			case 1:
-				label.SetText(fmt.Sprintf("%X", p.SrcMAC))
-			case 2:
-				label.SetText(fmt.Sprintf("%X", p.DstMAC))
-			case 3:
 				label.SetText(p.Packet.Sender())
-			case 4:
+			case 2:
 				label.SetText(p.Packet.Dest())
+			case 3:
+				label.SetText(p.Packet.Info())
 			}
 		},
 	)
@@ -151,7 +149,7 @@ func main() {
 	table.UpdateHeader = func(id widget.TableCellID, template fyne.CanvasObject) {
 		if id.Row == -1 {
 			label := template.(*widget.Label)
-			headers := []string{"Type", "Sender MAC", "Destination MAC", "Sender Info", "Destination Info"}
+			headers := []string{"Type", "Sender", "Destination", "Info"}
 			label.SetText(headers[id.Col])
 		}
 	}
