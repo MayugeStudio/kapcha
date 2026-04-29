@@ -7,7 +7,9 @@ type ArpPacket struct {
 	ProtocolType 		    [2]byte
 	HardwareLength	    byte
 	ProtocolLength 	    byte
-	Operation			      [2]byte
+
+  Operation			      [2]byte // opcode (ares_op$REQUEST | ares_op$REPLY)
+
 
 	SenderHardwareAddr  [6]byte
 	SenderProtocolAddr  [4]byte	
@@ -40,7 +42,14 @@ func MACaddrToString(rawaddr [6]byte) string {
 }
 
 func (a ArpPacket) String() string {
-	return fmt.Sprintf("MAC: %s / IP: %s -> MAC: %s / IP: %s", 
+	opstr := ""
+	if a.Operation == [2]byte{0, 1} {
+		opstr = "Request"
+	} else {
+		opstr = "Reply"
+	}
+	return fmt.Sprintf("%s: MAC: %s / IP: %s -> MAC: %s / IP: %s", 
+		opstr,
 		MACaddrToString(a.SenderHardwareAddr),
 		IPaddrToString(a.SenderProtocolAddr),
 		MACaddrToString(a.DestHardwareAddr),
